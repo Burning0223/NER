@@ -1,0 +1,13 @@
+__pycache__/ 
+
+.vscode/ 
+
+*.pt
+
+data_path/
+
+swanlog/
+
+bert-base-chinese/
+
+experiment/
