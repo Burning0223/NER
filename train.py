@@ -59,7 +59,7 @@ class Trainer():
     def dev(self,dataloader):
         self.model.eval()
         total_loss=0.0
-        with torch.no_grad:
+        with torch.no_grad():
             for batch in dataloader:
                 batch={k:v.to(device) for k,v in batch.items()}
                 logits,labels=self.model(**batch)
@@ -80,7 +80,7 @@ class Trainer():
             self.model.load_state_dict(checkpoint['model'])
         self.model.eval()
         total_loss=0.0
-        with torch.no_grad:
+        with torch.no_grad():
             for batch in dataloader:
                 batch={k:v.to(device) for k,v in batch.items()}
                 logits,labels=self.model(**batch)
@@ -94,7 +94,7 @@ class Trainer():
 
     def save_checkpoint(self,train_dataloader,dev_dataloader,test_dataloader):
         dev_best_f1=0.0
-        for epoch in range(self.config.num_classes):
+        for epoch in range(self.config.num_epochs):
             print(f"Epoch{epoch+1}")
             train_loss,train_precision,train_recall,train_f1=self.train(train_dataloader)
             dev_loss,dev_precision,dev_recall,dev_f1=self.dev(dev_dataloader)
@@ -118,12 +118,12 @@ class Trainer():
         }
         if self.optimizer is not None:
             checkpoint['optimizer']=self.optimizer.state_dict()
-        torch.save(checkpoint,checkpoint_path)
-        print(f"保存epoch{epoch+1}的checkpoint:{checkpoint_path}")
+        
         if dev_f1>=dev_best_f1:
             dev_best_f1=dev_f1
             best_model_path=checkpoint_path
             print(f"当前模型最优f1分数为:{dev_best_f1}")
+            torch.save(checkpoint,checkpoint_path)
             print(f"保存最佳模型：{best_model_path}")
 
             swanlab.log({
