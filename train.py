@@ -39,6 +39,7 @@ class Trainer():
         
     def train(self,dataloader):
         self.model.train()
+        self.metric.reset()
         total_loss=0.0
 
         for batch in dataloader:
@@ -53,11 +54,13 @@ class Trainer():
             
             self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
         ave_loss=total_loss/len(dataloader)
-        train_precision,train_recall,train_f1=self.metric.compute()
+        train_precision,train_recall,train_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
+        self.metric.report()
         return ave_loss,train_precision,train_recall,train_f1
     
     def dev(self,dataloader):
         self.model.eval()
+        self.metric.reset()
         total_loss=0.0
         with torch.no_grad():
             for batch in dataloader:
@@ -67,9 +70,9 @@ class Trainer():
                 loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
                 total_loss+=loss.item()
                 self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
-            ave_loss=total_loss/len(dataloader)
-            dev_precision,dev_recall,dev_f1=self.metric.compute()
-            return ave_loss,dev_precision,dev_recall,dev_f1
+        ave_loss=total_loss/len(dataloader)
+        dev_precision,dev_recall,dev_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
+        return ave_loss,dev_precision,dev_recall,dev_f1
     
     def test(self,dataloader,best_model_path):
         if not os.path.exists(best_model_path):
@@ -79,6 +82,7 @@ class Trainer():
             checkpoint=torch.load(best_model_path)
             self.model.load_state_dict(checkpoint['model'])
         self.model.eval()
+        self.metric.reset()
         total_loss=0.0
         with torch.no_grad():
             for batch in dataloader:
@@ -88,9 +92,10 @@ class Trainer():
                 loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
                 total_loss+=loss.item()
                 self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
-            ave_loss=total_loss/len(dataloader)
-            test_precision,test_recall,test_f1=self.metric.compute()
-            return ave_loss,test_precision,test_recall,test_f1
+        ave_loss=total_loss/len(dataloader)
+        test_precision,test_recall,test_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
+        self.metric.report()
+        return ave_loss,test_precision,test_recall,test_f1
 
     def save_checkpoint(self,train_dataloader,dev_dataloader,test_dataloader):
         dev_best_f1=0.0
@@ -108,23 +113,23 @@ class Trainer():
             print(f"验证集召回率:{dev_recall:.4f}")
             print(f"验证集f1分数:{dev_f1:.4f}")
 
-        checkpoint_name=f"check_epoch_{epoch+1}.pt"
-        checkpoint_path=os.path.join(self.experiment_dir,checkpoint_name)
-        checkpoint={
-            'epoch':epoch,
-            'model':self.model.state_dict(),
-            'loss':dev_loss,
-            'f1':dev_f1
-        }
-        if self.optimizer is not None:
-            checkpoint['optimizer']=self.optimizer.state_dict()
+            checkpoint_name=f"check_epoch_{epoch+1}.pt"
+            checkpoint_path=os.path.join(self.experiment_dir,checkpoint_name)
+            checkpoint={
+                'epoch':epoch,
+                'model':self.model.state_dict(),
+                'loss':dev_loss,
+                'f1':dev_f1
+            }
+            if self.optimizer is not None:
+                checkpoint['optimizer']=self.optimizer.state_dict()
         
-        if dev_f1>=dev_best_f1:
-            dev_best_f1=dev_f1
-            best_model_path=checkpoint_path
-            print(f"当前模型最优f1分数为:{dev_best_f1}")
-            torch.save(checkpoint,checkpoint_path)
-            print(f"保存最佳模型：{best_model_path}")
+            if dev_f1>=dev_best_f1:
+                dev_best_f1=dev_f1
+                best_model_path=checkpoint_path
+                print(f"当前模型最优f1分数为:{dev_best_f1}")
+                torch.save(checkpoint,checkpoint_path)
+                print(f"保存最佳模型：{best_model_path}")
 
             swanlab.log({
                 "epoch":epoch,
@@ -134,7 +139,7 @@ class Trainer():
                 "验证集f1分数":dev_f1
             })
         print(f"模型最优f1分数为:{dev_best_f1}")
-        test_loss,test_precision,test_recall,test_f1=self.test(test_dataloader)
+        test_loss,test_precision,test_recall,test_f1=self.test(test_dataloader,best_model_path)
         print(f"测试集损失:{test_loss:.4f}")
         print(f"测试集精准率:{test_precision:.4f}")
         print(f"测试集召回率:{test_recall:.4f}")
@@ -163,7 +168,7 @@ def main(config_path):
     optimizer=torch.optim.AdamW(
         model.parameters(),lr=config.learning_rate
         )
-    metric=Metrics(id2label)
+    metric=Metrics(id2label,config)
     trainer=Trainer(config,model,optimizer,metric)
     trainer.save_checkpoint(train_dataloader,dev_dataloader,test_dataloader)
 
