@@ -4,6 +4,7 @@ import numpy as np
 import swanlab
 import torch
 from torch import nn
+from transformers import get_linear_schedule_with_warmup
 from utils import NER_Config,LabelManager,Metrics
 import os
 from data_process import NERDataset
@@ -22,12 +23,13 @@ device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"使用设备：{device}")
 
 class Trainer():
-    def __init__(self,config,model,optimizer,metric):
+    def __init__(self,config,model,optimizer,metric,scheduler):
         self.config=config
         self.model=model.to(device)
         self.optimizer=optimizer
         self.loss_fn=nn.CrossEntropyLoss(ignore_index=-100)
         self.metric=metric
+        self.scheduler=scheduler
 
         self.experiment_name=f"max_len_{self.config.max_length}_num_epochs_{self.config.num_epochs}_bs_{self.config.batch_size}_lr_{self.config.learning_rate}"
         self.experiment_dir=os.path.join("experiment",self.experiment_name)
@@ -51,7 +53,7 @@ class Trainer():
             total_loss+=loss.item()
             loss.backward()
             self.optimizer.step()
-            
+            self.scheduler.step()
             self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
         ave_loss=total_loss/len(dataloader)
         train_precision,train_recall,train_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
@@ -123,7 +125,8 @@ class Trainer():
             }
             if self.optimizer is not None:
                 checkpoint['optimizer']=self.optimizer.state_dict()
-        
+            if self.scheduler is not None:
+                checkpoint['scheduler']=self.scheduler.state_dict()
             if dev_f1>=dev_best_f1:
                 dev_best_f1=dev_f1
                 best_model_path=checkpoint_path
@@ -168,8 +171,11 @@ def main(config_path):
     optimizer=torch.optim.AdamW(
         model.parameters(),lr=config.learning_rate
         )
+    total_steps = len(train_dataloader) * config.num_epochs
+    num_warmup_steps = int(total_steps * 0.1)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=total_steps)
     metric=Metrics(id2label,config)
-    trainer=Trainer(config,model,optimizer,metric)
+    trainer=Trainer(config,model,optimizer,metric,scheduler)
     trainer.save_checkpoint(train_dataloader,dev_dataloader,test_dataloader)
 
 if __name__=="__main__":
