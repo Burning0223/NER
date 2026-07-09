@@ -4,7 +4,7 @@ import numpy as np
 import swanlab
 import torch
 from torch import nn
-from untils import NER_Config,LabelManager,Metrics
+from utils import NER_Config,LabelManager,Metrics
 import os
 from data_process import NERDataset
 from torch.utils.data import DataLoader

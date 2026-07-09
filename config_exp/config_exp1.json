@@ -1,6 +1,6 @@
 {
     "model_path":"bert-base-chinese",
-    "max_length":128,
+    "max_length":512,
     "num_epochs":20,
     "batch_size":16,
     "learning_rate":5e-6,

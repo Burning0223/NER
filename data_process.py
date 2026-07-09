@@ -13,11 +13,11 @@ class NERDataset(Dataset):
 
     def load_data(self,dataset_type):
         if dataset_type == "train":
-            file_path = f"{self.config.data_path}/train_5k.txt"
+            file_path = f"{self.config.data_path}/train.txt"
         elif dataset_type == "dev":
-            file_path = f"{self.config.data_path}/dev_1k.txt"
+            file_path = f"{self.config.data_path}/dev.txt"
         elif dataset_type == "test":
-            file_path = f"{self.config.data_path}/test_1k.txt"
+            file_path = f"{self.config.data_path}/test.txt"
         else:
             raise ValueError(f"Unknown dataset type: {dataset_type}")
         words=[]
