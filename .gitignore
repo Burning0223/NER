@@ -10,4 +10,6 @@ swanlog/
 
 bert-base-chinese/
 
+chinese-bert-wwm/
+
 experiment/

@@ -31,7 +31,7 @@ class Trainer():
         self.metric=metric
         self.scheduler=scheduler
 
-        self.experiment_name=f"max_len_{self.config.max_length}_num_epochs_{self.config.num_epochs}_bs_{self.config.batch_size}_lr_{self.config.learning_rate}"
+        self.experiment_name=f"model_{self.config.model_path}_max_len_{self.config.max_length}_num_epochs_{self.config.num_epochs}_bs_{self.config.batch_size}_lr_{self.config.learning_rate}"
         self.experiment_dir=os.path.join("experiment",self.experiment_name)
         os.makedirs(self.experiment_dir,exist_ok=True)
         swanlab.init(project="NER",
