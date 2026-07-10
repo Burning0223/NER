@@ -5,8 +5,8 @@
 - `bert-base-chinese`
 - `chinese-bert-wwm`
 两种中文预训练 BERT 模型，在：
-- Weibo NER
-- MSRA NER
+- `Weibo NER`
+- `MSRA NER`
 两个数据集上进行训练和评估。
 ## 项目结构
 ``` 
