@@ -34,12 +34,11 @@ class Metrics:
         
     def reset(self):
         self.tp=0
-        self.fp=0
-        self.fn=0
+        self.pred_sum=0
+        self.true_sum=0
         self.entities_tp={}
-        self.entities_fp={}
-        self.entities_fn={}
-        self.entities_support={}
+        self.entities_pred={}
+        self.entities_true={}
     
     def get_entities(self,labels):
         if isinstance(labels[0], list):
@@ -64,7 +63,7 @@ class Metrics:
             entities.append((entity_type,start,len(labels)-1))
 
         return entities
-    def calculate_tp_fp_fn(self,preds,labels):
+    def calculate(self,preds,labels):
         
         p_labels=[
             [self.id2label[int(p)] for p,t in zip(pred_seq,true_seq) if t!=-100]
@@ -79,26 +78,23 @@ class Metrics:
             true_entities=set(self.get_entities(true_seq))
 
             self.tp+=len(pred_entities&true_entities)
-            self.fp+=len(pred_entities-true_entities)
-            self.fn+=len(true_entities-pred_entities)
+            self.pred_sum+=len(pred_entities)
+            self.true_sum+=len(true_entities)
 
             for entity in pred_entities:
                 entity_type=entity[0]
                 if entity in true_entities:
                     self.entities_tp[entity_type]=self.entities_tp.get(entity_type,0)+1
-                else:
-                    self.entities_fp[entity_type]=self.entities_fp.get(entity_type,0)+1
+                self.entities_pred[entity_type]=self.entities_pred.get(entity_type,0)+1
             for entity in true_entities:
                 entity_type=entity[0]
-                if entity not in pred_entities:
-                    self.entities_fn[entity_type]=self.entities_fn.get(entity_type,0)+1
-                self.entities_support[entity_type]=self.entities_support.get(entity_type,0)+1
+                self.entities_true[entity_type]=self.entities_true.get(entity_type,0)+1
 
 
-    def compute(self,tp,fp,fn):
+    def compute(self,tp,pred_sum,true_sum):
         eps=1e-8
-        precision=tp/(tp+fp+eps)
-        recall=tp/(tp+fn+eps)
+        precision=tp/(pred_sum+eps)
+        recall=tp/(true_sum+eps)
         f1=2*precision*recall/(precision+recall+eps)
         
         return precision,recall,f1
@@ -107,39 +103,37 @@ class Metrics:
     def report(self):
         print(f"{'Entity':<10}{'Precision':<15}{'Recall':<15}{'F1-Score':<15}{'Support':<10}")
         sum_p,sum_r,sum_f,count=0,0,0,0
-        weighted_p,weighted_r,weighted_f,total_suppot=0,0,0,0
+        weighted_p,weighted_r,weighted_f=0,0,0
         entity_types=set()
         for label in self.id2label.values():
             if label!="O":
                 entity_types.add(label.split("-")[1])
         for entity_type in entity_types:
             tp=self.entities_tp.get(entity_type,0)
-            fp=self.entities_fp.get(entity_type,0)
-            fn=self.entities_fn.get(entity_type,0)
-            precision,recall,f1=self.compute(tp,fp,fn)
-            support=self.entities_support.get(entity_type,0)
-            print(f"{entity_type:<10}{precision:<15.2f}{recall:<15.2f}{f1:<15.2f}{support:<10}")
+            pred_num=self.entities_pred.get(entity_type,0)
+            true_num=self.entities_true.get(entity_type,0)
+            precision,recall,f1=self.compute(tp,pred_num,true_num)
+            print(f"{entity_type:<10}{precision:<15.2f}{recall:<15.2f}{f1:<15.2f}{true_num:<10}")
             
             sum_p+=precision
             sum_r+=recall
             sum_f+=f1
             count+=1
 
-            weighted_p+=precision*support
-            weighted_r+=recall*support
-            weighted_f+=f1*support
-            total_suppot+=support
+            weighted_p+=precision*true_num
+            weighted_r+=recall*true_num
+            weighted_f+=f1*true_num
 
-        micro_avg_p,micro_avg_r,micro_avg_f=self.compute(self.tp,self.fp,self.fn)
+        micro_avg_p,micro_avg_r,micro_avg_f=self.compute(self.tp,self.pred_sum,self.true_sum)
         macro_avg_p=sum_p/count
         macro_avg_r=sum_r/count
         macro_avg_f=sum_f/count
-        weighted_avg_p=weighted_p/total_suppot
-        weighted_avg_r=weighted_r/total_suppot
-        weighted_avg_f=weighted_f/total_suppot
-        print(f"\n{'micro avg':<10}{micro_avg_p:<15.2f}{micro_avg_r:<15.2f}{micro_avg_f:<15.2f}{total_suppot:<10}")
-        print(f"\n{'macro avg':<10}{macro_avg_p:<15.2f}{macro_avg_r:<15.2f}{macro_avg_f:<15.2f}{total_suppot:<10}")
-        print(f"\n{'weighted avg':<10}{weighted_avg_p:<15.2f}{weighted_avg_r:<15.2f}{weighted_avg_f:<15.2f}{total_suppot:<10}")
+        weighted_avg_p=weighted_p/self.true_sum
+        weighted_avg_r=weighted_r/self.true_sum
+        weighted_avg_f=weighted_f/self.true_sum
+        print(f"{'micro avg':<10}{micro_avg_p:<15.2f}{micro_avg_r:<15.2f}{micro_avg_f:<15.2f}{self.true_sum:<10}")
+        print(f"{'macro avg':<10}{macro_avg_p:<15.2f}{macro_avg_r:<15.2f}{macro_avg_f:<15.2f}{self.true_sum:<10}")
+        print(f"{'weighted avg':<10}{weighted_avg_p:<15.2f}{weighted_avg_r:<15.2f}{weighted_avg_f:<15.2f}{self.true_sum:<10}")
 
 
 

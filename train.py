@@ -54,9 +54,9 @@ class Trainer():
             loss.backward()
             self.optimizer.step()
             self.scheduler.step()
-            self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
+            self.metric.calculate(preds.cpu().tolist(),labels.cpu().tolist())
         ave_loss=total_loss/len(dataloader)
-        train_precision,train_recall,train_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
+        train_precision,train_recall,train_f1=self.metric.compute(self.metric.tp,self.metric.pred_sum,self.metric.true_sum)
         self.metric.report()
         return ave_loss,train_precision,train_recall,train_f1
     
@@ -71,9 +71,9 @@ class Trainer():
                 preds=torch.argmax(logits,dim=-1)
                 loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
                 total_loss+=loss.item()
-                self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
+                self.metric.calculate(preds.cpu().tolist(),labels.cpu().tolist())
         ave_loss=total_loss/len(dataloader)
-        dev_precision,dev_recall,dev_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
+        dev_precision,dev_recall,dev_f1=self.metric.compute(self.metric.tp,self.metric.pred_sum,self.metric.true_sum)
         return ave_loss,dev_precision,dev_recall,dev_f1
     
     def test(self,dataloader,best_model_path):
@@ -93,9 +93,9 @@ class Trainer():
                 preds=torch.argmax(logits,dim=-1)
                 loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
                 total_loss+=loss.item()
-                self.metric.calculate_tp_fp_fn(preds.cpu().tolist(),labels.cpu().tolist())
+                self.metric.calculate(preds.cpu().tolist(),labels.cpu().tolist())
         ave_loss=total_loss/len(dataloader)
-        test_precision,test_recall,test_f1=self.metric.compute(self.metric.tp,self.metric.fp,self.metric.fn)
+        test_precision,test_recall,test_f1=self.metric.compute(self.metric.tp,self.metric.pred_sum,self.metric.true_sum)
         self.metric.report()
         return ave_loss,test_precision,test_recall,test_f1
 
