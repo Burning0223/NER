@@ -4,7 +4,7 @@
     "num_epochs":20,
     "batch_size":16,
     "learning_rate":5e-6,
-    "num_classes":7,
+    "num_classes":17,
     "data_path":"./data_path/weibo/",
     "dropout":0.1,
     "random":42

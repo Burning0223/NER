@@ -75,29 +75,6 @@ class Trainer():
         ave_loss=total_loss/len(dataloader)
         dev_precision,dev_recall,dev_f1=self.metric.compute(self.metric.tp,self.metric.pred_sum,self.metric.true_sum)
         return ave_loss,dev_precision,dev_recall,dev_f1
-    
-    def test(self,dataloader,best_model_path):
-        if not os.path.exists(best_model_path):
-            print("未找到最优模型，无法进行测试！")
-            return
-        else:
-            checkpoint=torch.load(best_model_path)
-            self.model.load_state_dict(checkpoint['model'])
-        self.model.eval()
-        self.metric.reset()
-        total_loss=0.0
-        with torch.no_grad():
-            for batch in dataloader:
-                batch={k:v.to(device) for k,v in batch.items()}
-                logits,labels=self.model(**batch)
-                preds=torch.argmax(logits,dim=-1)
-                loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
-                total_loss+=loss.item()
-                self.metric.calculate(preds.cpu().tolist(),labels.cpu().tolist())
-        ave_loss=total_loss/len(dataloader)
-        test_precision,test_recall,test_f1=self.metric.compute(self.metric.tp,self.metric.pred_sum,self.metric.true_sum)
-        self.metric.report()
-        return ave_loss,test_precision,test_recall,test_f1
 
     def save_checkpoint(self,train_dataloader,dev_dataloader,test_dataloader):
         dev_best_f1=0.0
@@ -142,7 +119,13 @@ class Trainer():
                 "验证集f1分数":dev_f1
             })
         print(f"模型最优f1分数为:{dev_best_f1}")
-        test_loss,test_precision,test_recall,test_f1=self.test(test_dataloader,best_model_path)
+        if not os.path.exists(best_model_path):
+            print("未找到最优模型，无法进行测试！")
+            return
+        else:
+            checkpoint=torch.load(best_model_path)
+            self.model.load_state_dict(checkpoint['model'])
+        test_loss,test_precision,test_recall,test_f1=self.dev(test_dataloader)
         print(f"测试集损失:{test_loss:.4f}")
         print(f"测试集精准率:{test_precision:.4f}")
         print(f"测试集召回率:{test_recall:.4f}")
