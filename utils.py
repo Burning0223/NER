@@ -53,7 +53,14 @@ class Metrics:
                 entity_type=label[2:]
                 start=i
             elif label.startswith("I-"):
-                continue
+                current_type=label[2:]
+                if current_type==entity_type:
+                    continue
+                else:
+                    if entity_type is not None:
+                        entities.append((entity_type,start,i-1))
+                    entity_type=None
+                    start=None
             else:
                 if entity_type is not None:
                     entities.append((entity_type,start,i-1))
