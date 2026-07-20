@@ -47,7 +47,10 @@ class Trainer():
         for batch in dataloader:
             batch={k:v.to(device) for k,v in batch.items()}
             self.optimizer.zero_grad()
-            logits,labels=self.model(**batch)
+            input_ids=batch["input_ids"]
+            attention_mask=batch["attention_mask"]
+            labels=batch["labels"]
+            logits=self.model(input_ids,attention_mask)
             preds=torch.argmax(logits,dim=-1)
             loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
             total_loss+=loss.item()
@@ -67,7 +70,10 @@ class Trainer():
         with torch.no_grad():
             for batch in dataloader:
                 batch={k:v.to(device) for k,v in batch.items()}
-                logits,labels=self.model(**batch)
+                input_ids=batch["input_ids"]
+                attention_mask=batch["attention_mask"]
+                labels=batch["labels"]
+                logits=self.model(input_ids,attention_mask)
                 preds=torch.argmax(logits,dim=-1)
                 loss=self.loss_fn(logits.view(-1,self.config.num_classes),labels.view(-1))
                 total_loss+=loss.item()
